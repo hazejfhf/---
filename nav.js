@@ -1,3 +1,4 @@
+try { if (localStorage.getItem('site_theme') === 'dark') (document.body || document.documentElement).classList.add('dark-mode'); } catch (e) {}
 // nav.js — الناف الموحد (ستايل أمازون) لكل الصفحات: ديسكتوب + موبايل
 (function () {
   'use strict';

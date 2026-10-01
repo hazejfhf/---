@@ -54,7 +54,7 @@
                 <button class="filter-chip" onclick="setFilterChip(this, 'rating-high')">⭐ التقييم: الأعلى</button>
                 <button class="filter-chip" onclick="setFilterChip(this, 'rating-low')">📉 التقييم: الأدنى</button>
             </div>
-            <select id="admin-price-sort" style="display:none;" onchange="triggerPriceSortAction()"><option value="favorites">favorites</option>
+            <select id="admin-price-sort" style="display:none;" onchange="triggerPriceSortAction()">
                 <option value="default">الافتراضي</option>
                 <option value="high-to-low">السعر: الأعلى</option>
                 <option value="low-to-high">السعر: الأدنى</option>
@@ -62,6 +62,7 @@
                 <option value="oldest">الأقدم</option>
                 <option value="rating-high">التقييم: الأعلى</option>
                 <option value="rating-low">التقييم: الأدنى</option>
+            <option value="favorites">المفضلة</option>
             </select>
         </div>
     </div>
@@ -90,7 +91,7 @@
             document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
             el.classList.add('active');
             const sel = document.getElementById('admin-price-sort');
-            if (sel) { sel.value = value; triggerPriceSortAction(); }
+            if (sel) { sel.value = value; try { localStorage.setItem('shop_sort_pref', value); } catch (e) {} triggerPriceSortAction(); }
         }
     </script>
 

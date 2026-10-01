@@ -57,7 +57,8 @@ function applyGlobalSiteSettings() {
 
 function applyGlobalDarkMode() {
     var user = getCurrentUser();
-    var isDark = user && user.theme === 'dark';
+    var saved = null; try { saved = localStorage.getItem('site_theme'); } catch (e) {}
+    var isDark = saved ? saved === 'dark' : !!(user && user.theme === 'dark');
     if (isDark) {
         document.body.classList.add('dark-mode');
     } else {
@@ -247,6 +248,8 @@ function buildUniversalHTMLCards(container, list) {
         if (sortValue === 'newest') return (b.id || 0) - (a.id || 0);
         if (sortValue === 'oldest') return (a.id || 0) - (b.id || 0);
         // الافتراضي: المفضلة أولاً
+        const ia = window.__interestScore ? window.__interestScore(a) : 0, ib = window.__interestScore ? window.__interestScore(b) : 0;
+        if (ib !== ia) return ib - ia;
         let aFav = wishlist.includes(Number(a.id)) ? 1 : 0;
         let bFav = wishlist.includes(Number(b.id)) ? 1 : 0;
         return bFav - aFav;
@@ -1221,7 +1224,7 @@ function setAddressMode(mode) {
         containerGps.style.display = 'block'; containerManual.style.display = 'none';
     } else {
         btnGps.classList.remove('active'); btnManual.classList.add('active');
-        containerGps.style.display = 'none'; containerManual.style.display = 'flex';
+        containerGps.style.display = 'none'; containerManual.style.display = 'block';
     }
 }
 
@@ -1464,7 +1467,7 @@ function submitFinalOrder() {
     }
 
     // إذا كان الدفع كاش → نافذة التحويل
-    const isCash = payment.includes('الاستلام') || payment.toLowerCase().includes('cod') || payment.includes('نقد');
+    const isCash = payment.includes('فودافون');
     if (isCash) {
         showCashPaymentModal().then(function(result) {
             if (!result.confirmed) return;
@@ -2330,4 +2333,59 @@ document.addEventListener('DOMContentLoaded', function () {
             renderAddrReview(); d.remove();
         };
     }, 700);
+});
+
+
+// =========================================================================
+// ذكاء الاهتمامات: بنتعلم من بحث العميل وتصفحه وإضافاته للسلة ونرتب "الافتراضي" على أساسها
+// =========================================================================
+(function () {
+    var KEY = 'interest_prof_v1';
+    var STOP = ['من','في','على','عن','مع','ذو','هذا','هذه','الى','إلى','او','أو','جدا','جداً','قطعة','للرجال','للسيدات'];
+    function load() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
+    function toks(t) {
+        return String(t || '').toLowerCase().replace(/[^\u0600-\u06FFa-z0-9\s]/g, ' ').split(/\s+/)
+            .map(function (w) { return w.replace(/^ال/, ''); })
+            .filter(function (w) { return w.length >= 3 && STOP.indexOf(w) < 0; });
+    }
+    function bump(text, w) {
+        var p = load(), t = toks(text); if (!t.length) return;
+        Object.keys(p).forEach(function (k) { p[k] *= 0.97; if (p[k] < 0.2) delete p[k]; });
+        t.forEach(function (k) { p[k] = Math.min(30, (p[k] || 0) + w); });
+        try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) {}
+    }
+    function prodText(id) { var p = (window.products || products || []).find(function (x) { return Number(x.id) === Number(id); }); return p ? (p.title + ' ' + (p.category || '') + ' ' + (p.desc || '')) : ''; }
+    window.__interestScore = function (p) {
+        var pr = load(), s = 0;
+        toks((p.title || '') + ' ' + (p.category || '') + ' ' + (p.desc || '')).forEach(function (k) { s += pr[k] || 0; });
+        return s;
+    };
+    var _open = window.openProductDetailsModal;
+    if (typeof _open === 'function') window.openProductDetailsModal = function (id) { bump(prodText(id), 2); return _open.apply(this, arguments); };
+    var _add = window.addProductToCart;
+    if (typeof _add === 'function') window.addProductToCart = function (id) { bump(prodText(id), 3); return _add.apply(this, arguments); };
+    var _qa = window.quickAddToCart;
+    if (typeof _qa === 'function') window.quickAddToCart = function (id) { bump(prodText(id), 3); return _qa.apply(this, arguments); };
+    var _w = window.toggleWishlistSystem;
+    if (typeof _w === 'function') window.toggleWishlistSystem = function (id) { bump(prodText(id), 2.5); return _w.apply(this, arguments); };
+    var _s = window.runStoreSearch, tm;
+    if (typeof _s === 'function') window.runStoreSearch = function (q) {
+        clearTimeout(tm); var v = String(q || ''); if (v.trim().length >= 3) tm = setTimeout(function () { bump(v, 1.5); }, 1200);
+        return _s.apply(this, arguments);
+    };
+})();
+
+// استرجاع آخر ترتيب اختاره العميل (الافتراضي لو مفيش) — بيفضل بعد التحديث
+document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(function () {
+        var sel = document.getElementById('admin-price-sort'); if (!sel) return;
+        var v = 'default'; try { v = localStorage.getItem('shop_sort_pref') || 'default'; } catch (e) {}
+        if (![].some.call(sel.options, function (o) { return o.value === v; })) v = 'default';
+        sel.value = v;
+        document.querySelectorAll('.filter-chip').forEach(function (b) {
+            var m = (b.getAttribute('onclick') || '').match(/'([^']+)'\)/);
+            b.classList.toggle('active', !!m && m[1] === v);
+        });
+        if (typeof triggerPriceSortAction === 'function') triggerPriceSortAction();
+    }, 50);
 });

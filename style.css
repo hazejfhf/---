@@ -891,3 +891,24 @@ body{padding-bottom:calc(72px + env(safe-area-inset-bottom,0px))!important}
 .ct-policy{display:flex;align-items:center;gap:8px;margin:14px 0 6px;font-size:.92rem}
 .ac-quick{margin-top:10px;background:#14213d;color:#fff}
 .ac-idbox span{font-size:.8rem;color:#777;margin-inline-end:6px}
+
+/* وضع داكن: كروت العروض والمنتجات (الفاتح زي ما هو) */
+body.dark-mode .slider-container,body.dark-mode .slider-details-box,body.dark-mode .pc,body.dark-mode .saved-addr,body.dark-mode .addr-review{background:#1a2238!important;border-color:#2c3757!important}
+body.dark-mode .slider-details-box *,body.dark-mode .pc-title,body.dark-mode .pc-price,body.dark-mode .pc-price *{color:#f0f2fa!important}
+body.dark-mode #slider-title{color:#fff!important}
+body.dark-mode #slider-desc,body.dark-mode .pc-was,body.dark-mode .pc-ship,body.dark-mode .pc-sold{color:#b8c2dc!important}
+body.dark-mode .addr-review *,body.dark-mode .saved-addr *{color:#e8ecf5!important}
+body.dark-mode .filter-chip{background:#1e2a44;color:#e8ecf5;border-color:#34426b}
+body.dark-mode .filter-chip.active{background:var(--navy,#1b2a4e);color:#fff}
+body.dark-mode .ct-in,body.dark-mode .ct-seg button:not(.active),body.dark-mode .ct-box{background:#0f1524;color:#e8ecf5;border-color:#3b4770}
+body.dark-mode .ct-l,body.dark-mode .ct-policy{color:#e8ecf5}
+body.dark-mode .mz-grid a{background:#232f4d;color:#e8ecf5;border-color:#34426b}
+body.dark-mode .mz-head,body.dark-mode .mz-close{color:#e8ecf5;background:transparent}
+body.dark-mode .store-modal,body.dark-mode .trk-box{background:#1a2238;color:#e8ecf5}
+/* زرار المزيد: يظهر فوق الشريط السفلي وآخر الأزرار قابلة للسكرول */
+.mz{z-index:2147483600!important}
+@media(max-width:768px){.mz-box{max-height:82vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))}}
+/* عنوان السلة: كل حقل تحت اللي قبله */
+#manual-location-container{display:block}
+#manual-location-container .ct-in{margin-bottom:4px}
+.addr-review{max-height:none;overflow:visible}

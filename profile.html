@@ -83,7 +83,7 @@
         $('pf-title').textContent = 'أهلاً، ' + (u.name || '');
         $('pf-id').textContent = u.userId;
         $('pf-name').value = u.name || ''; $('pf-phone').value = u.phone || '';
-        $('pf-dark').checked = u.theme === 'dark'; document.body.classList.toggle('dark-mode', u.theme === 'dark');
+        var _sv = null; try { _sv = localStorage.getItem('site_theme'); } catch (e) {} var _dk = _sv ? _sv === 'dark' : u.theme === 'dark'; $('pf-dark').checked = _dk; document.body.classList.toggle('dark-mode', _dk);
         setAvatar(u.avatar);
     }
     function persist() {
@@ -127,7 +127,7 @@
     });
 
     $('pf-dark').onchange = function () {
-        u.theme = this.checked ? 'dark' : 'light'; document.body.classList.toggle('dark-mode', this.checked); persist();
+        u.theme = this.checked ? 'dark' : 'light'; try { localStorage.setItem('site_theme', u.theme); } catch (e) {} document.body.classList.toggle('dark-mode', this.checked); persist();
         if (window.FBAuth && window.FBAuth.updateProfile) { /* الثيم محفوظ محلياً */ }
     };
 
