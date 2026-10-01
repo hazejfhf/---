@@ -1324,7 +1324,17 @@
       }
       localStorage.removeItem('sub_admin_logged');
       const ok = _origUnlock ? await _origUnlock.apply(this, arguments) : false;
-      if (!ok) { showSupportPage(entered); return; }
+      if (!ok) {
+        if (/[?&]debug=1/.test(location.search)) {
+          const c = window.__adminLoginErr || 'unknown';
+          const hint = /user-not-found|invalid-credential|invalid-email/.test(c) ? 'الإيميل ' + (window.ADMIN_LOGIN_EMAIL || '') + ' غير موجود في Firebase Authentication أو الباسورد غلط'
+            : /wrong-password/.test(c) ? 'الباسورد غلط'
+            : /not-in-admins/.test(c) ? 'الحساب صح لكن مفيش مستند باسم الـ UID ده في collection اسمها admins'
+            : /too-many/.test(c) ? 'محاولات كتير، استنى شوية' : 'راجع إعدادات Firebase (Email/Password مفعّل؟ Firestore مفعّل؟)';
+          alert('تشخيص الدخول:\n' + c + '\n' + hint);
+        }
+        showSupportPage(entered); return;
+      }
       refreshTabBadges();
       setInterval(refreshTabBadges, 30000);
     };

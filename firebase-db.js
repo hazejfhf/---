@@ -393,9 +393,11 @@ window.FBAuth = {
     async logout() { try { await signOut(auth); } catch (e) {} LS.removeItem('current_user'); },
 
     async adminLogin(email, password) {
-        try { await signInWithEmailAndPassword(auth, String(email).trim(), password); } catch (e) { return false; }
+        window.__adminLoginErr = '';
+        try { await signInWithEmailAndPassword(auth, String(email).trim(), password); } catch (e) { window.__adminLoginErr = (e && e.code) || String(e); return false; }
+        const uid = auth.currentUser && auth.currentUser.uid;
         const ok = await window.FBAuth._checkAdmin();
-        if (!ok) { await signOut(auth); return false; }
+        if (!ok) { window.__adminLoginErr = 'not-in-admins | UID=' + uid; await signOut(auth); return false; }
         window.FB_startAdminWatchers();
         return true;
     },
