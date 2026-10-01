@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" translate="no">
+
+<head>
+    <meta name="google" content="notranslate">
+    <script src="splash.js"></script>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https:; img-src 'self' https: data: blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://nominatim.openstreetmap.org; object-src 'none'; base-uri 'self'; form-action 'self'"><meta name="referrer" content="strict-origin-when-cross-origin">
+    <link href="./logo.png" type="image/x-icon" rel="icon">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="موقع لبيع الملابس الداخليه والخارجيه وهديه مجانيه وتوصيل سريع لجيمع المحافاظات">
+    <meta name="author" content="Hazem Momhamed">
+
+    <meta name="keywords" content="بيع الملابس,ملابس داخليه,بيع الملابس الخارجيه,ملابس ,ملابس قطن,مكتب رحيم">
+
+    <title>مراجعة سلة المشتريات وإتمام العملية</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    
+
+
+
+
+
+
+    <main class="ct-wrap">
+        <h1 class="ct-h1">سلة التسوق</h1>
+        <div class="ct-grid">
+            <section class="ct-card ct-a-items">
+                <div id="cart-items-table-body" class="ct-list"></div>
+            </section>
+
+            <aside class="ct-card ct-a-sum">
+                <h2>ملخص الطلب</h2>
+                <div class="ct-coupon">
+                    <input type="text" id="coupon-input" placeholder="كود الخصم" autocomplete="off">
+                    <button type="button" class="ct-btn-alt" onclick="applyStoreCoupon()">تطبيق</button>
+                </div>
+                <dl class="ct-lines">
+                    <div><dt>إجمالي المنتجات</dt><dd id="cart-subtotal">0 ج.م</dd></div>
+                    <div><dt>الخصم</dt><dd id="cart-discount-val" class="ct-neg">0 ج.م</dd></div>
+                    <div><dt>الشحن <span id="shipping-gov-label"></span></dt><dd id="cart-shipping-val">0 ج.م</dd></div>
+                    <div class="ct-grand"><dt>الإجمالي</dt><dd id="cart-total">0 ج.م</dd></div>
+                </dl>
+                <button type="button" class="ct-link" onclick="clearCart()">تفريغ السلة</button>
+            </aside>
+
+            <section id="checkout-section" class="ct-card ct-a-check checkout-box">
+                <h2>بيانات التوصيل</h2>
+
+                <label class="ct-l" for="order-name">اسم المستلم</label>
+                <input class="ct-in" type="text" id="order-name" placeholder="الاسم بالكامل" autocomplete="name">
+
+                <label class="ct-l" for="order-phone">رقم الموبايل</label>
+                <input class="ct-in" type="tel" id="order-phone" value="01" placeholder="01xxxxxxxxx" inputmode="numeric" maxlength="11" autocomplete="tel">
+                <small class="ct-hint">11 رقم ويبدأ بـ 01</small>
+
+                <span class="ct-l">عنوان التوصيل</span>
+                <div class="ct-seg">
+                    <button type="button" class="btn-location-type active" id="btn-loc-gps" onclick="setAddressMode('gps')">📍 موقعي الحالي</button>
+                    <button type="button" class="btn-location-type" id="btn-loc-manual" onclick="setAddressMode('manual')">✍️ كتابة العنوان</button>
+                </div>
+
+                <div id="gps-location-container" class="ct-box">
+                    <button type="button" class="ct-btn-alt" onclick="getUserCurrentGPSLocation()">حدد موقعي تلقائياً</button>
+                    <div id="gps-status-text" class="ct-hint">الموقع لم يُحدد بعد.</div>
+                    <input type="hidden" id="order-gps-coords" value="">
+                </div>
+
+                <div id="manual-location-container" class="ct-box" style="display:none;">
+                    <label class="ct-l" for="order-province">المحافظة</label>
+                    <select class="ct-in" id="order-province" onchange="populateCitiesAndDistricts()"><option value="">اختر المحافظة</option></select>
+                    <label class="ct-l" for="order-city">المدينة / المركز</label>
+                    <select class="ct-in" id="order-city" onchange="updateManualAddressString()"><option value="">اختر المحافظة أولاً</option></select>
+                    <label class="ct-l" for="order-place-name">اسم المكان (اختياري)</label>
+                    <input class="ct-in" type="text" id="order-place-name" placeholder="مثال: البيت، الشغل، أمام مسجد النور">
+                    <label class="ct-l" for="order-street-detail">الشارع والعمارة والشقة</label>
+                    <input class="ct-in" type="text" id="order-street-detail" placeholder="مثال: شارع الثورة، برج الأمل، شقة 4">
+                    <div id="addr-review" class="addr-review" style="display:none"></div>
+                </div>
+
+                <label class="ct-l" for="order-payment">طريقة الدفع</label>
+                <select class="ct-in" id="order-payment">
+                    <option value="الدفع عند الاستلام (COD)">الدفع عند الاستلام نقداً</option>
+                    <option value="فودافون كاش">المحافظ الإلكترونية (فودافون كاش)</option>
+                </select>
+
+                <label class="ct-policy"><input type="checkbox" id="order-policy"> أوافق على <a href="#" id="policy-link">سياسة الموقع</a></label>
+
+                <button type="button" class="ac-btn ct-submit" onclick="submitFinalOrder()">تأكيد الطلب</button>
+            </section>
+        </div>
+
+        <div id="sticky-tracking-box" class="ct-card ct-track" style="display:none;"></div>
+    </main>
+
+    <script type="module" src="firebase-db.js"></script>
+    <script src="script-1.js"></script>
+    <script src="script-extra.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            if (typeof renderCartItemsGrid === "function") {
+                renderCartItemsGrid();
+            }
+            // تشغيل دالة فحص كود التتبع المخزن لعرضه للمستحدم بشكل مستمر
+            if (typeof checkPersistentTrackingCode === "function") {
+                checkPersistentTrackingCode();
+            }
+        });
+    </script>
+
+
+
+<script src="security.js"></script>
+<script src="nav.js"></script>
+</body>
+
+</html>

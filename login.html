@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" translate="no">
+<head>
+    <meta name="google" content="notranslate">
+    <script src="splash.js"></script>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https:; img-src 'self' https: data: blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link href="./logo.png" type="image/x-icon" rel="icon">
+    <title>تسجيل الدخول - مكتب رحيم</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="ac-wrap">
+
+    <!-- تسجيل الدخول -->
+    <section class="ac-card" id="pane-login">
+        <h1>تسجيل الدخول</h1>
+        <form id="form-login" novalidate autocomplete="on">
+            <label for="l-id">رقم الحساب</label>
+            <input id="l-id" inputmode="numeric" autocomplete="username" maxlength="12" placeholder="مثال: 2000001">
+            <label for="l-pass">كلمة السر</label>
+            <div class="ac-pw"><input id="l-pass" type="password" autocomplete="current-password" maxlength="64"><button type="button" class="ac-eye">إظهار</button></div>
+            <div class="ac-err" id="l-err" role="alert"></div>
+            <button class="ac-btn" id="l-btn" type="submit">تسجيل الدخول</button>
+        </form>
+        <div class="ac-sep"><span>عميل جديد؟</span></div>
+        <button class="ac-btn ac-alt" type="button" id="go-reg">إنشاء حساب جديد</button>
+        <button class="ac-btn ac-quick" type="button" id="go-quick">⚡ دخول سريع (حساب جاهز بكلمة سر تلقائية)</button>
+    </section>
+
+    <!-- إنشاء حساب -->
+    <section class="ac-card" id="pane-reg" hidden>
+        <h1>إنشاء حساب</h1>
+        <form id="form-reg" novalidate autocomplete="on">
+            <label for="r-name">الاسم</label>
+            <input id="r-name" autocomplete="name" maxlength="60">
+            <label for="r-phone">رقم الموبايل</label>
+            <input id="r-phone" inputmode="numeric" autocomplete="tel" maxlength="11" placeholder="01xxxxxxxxx">
+            <label for="r-pass">كلمة السر (8 خانات: حروف إنجليزي وأرقام)</label>
+            <div class="ac-pw"><input id="r-pass" type="password" autocomplete="new-password" maxlength="64"><button type="button" class="ac-eye">إظهار</button></div>
+            <label for="r-pass2">تأكيد كلمة السر</label>
+            <input id="r-pass2" type="password" autocomplete="new-password" maxlength="64">
+            <div class="ac-err" id="r-err" role="alert"></div>
+            <button class="ac-btn" id="r-btn" type="submit">إنشاء الحساب</button>
+        </form>
+        <div class="ac-sep"><span>عندك حساب؟</span></div>
+        <button class="ac-btn ac-alt" type="button" id="go-login">تسجيل الدخول</button>
+    </section>
+
+    <!-- تم إنشاء الحساب -->
+    <section class="ac-card" id="pane-done" hidden>
+        <h1>تم إنشاء حسابك</h1>
+        <p class="ac-note">احفظ رقم حسابك، هتدخل بيه مع كلمة السر.</p>
+        <div class="ac-idbox"><span>رقم الحساب</span><b id="new-id">-</b><button type="button" class="ac-mini" id="copy-id">نسخ</button></div>
+        <div class="ac-idbox" id="new-pw-box" hidden><span>كلمة السر</span><b id="new-pw">-</b><button type="button" class="ac-mini" id="copy-pw">نسخ</button></div>
+        <p class="ac-note" id="new-pw-note" hidden>احفظ الاتنين دلوقتي — كلمة السر مش هتظهر تاني.</p>
+        <button class="ac-btn" type="button" id="done-go">متابعة</button>
+    </section>
+</main>
+
+<script type="module" src="firebase-db.js"></script>
+<script src="auth.js"></script>
+<script>
+(function () {
+    var $ = AC.$, target = AC.redirectTarget();
+    function show(p) { ['login', 'reg', 'done'].forEach(function (n) { $('pane-' + n).hidden = (n !== p); }); }
+    document.querySelectorAll('.ac-eye').forEach(function (b) { b.onclick = function () { AC.eye(b); }; });
+    $('go-reg').onclick = function () { show('reg'); };
+    $('go-login').onclick = function () { show('login'); };
+    if (new URLSearchParams(location.search).get('mode') === 'register') show('reg');
+    $('l-id').addEventListener('input', function () { this.value = AC.digits(this.value); });
+    AC.meter('r-pass'); AC.noArabic(['r-pass', 'r-pass2']);
+    $('r-phone').addEventListener('input', function () { this.value = AC.digits(this.value); });
+
+    AC.ready().then(function () { if (AC.user() && window.FBAuth && window.FBAuth.user) location.replace(target); });
+
+    $('form-login').addEventListener('submit', function (e) {
+        e.preventDefault(); AC.setErr('l-err', '');
+        var id = AC.digits($('l-id').value), pw = $('l-pass').value, btn = $('l-btn');
+        var lk = AC.lockLeft(); if (lk) return AC.setErr('l-err', 'محاولات كتير غلط. حاول بعد ' + lk + ' دقيقة.');
+        if (!id) return AC.setErr('l-err', 'اكتب رقم الحساب');
+        if (!pw) return AC.setErr('l-err', 'اكتب كلمة السر');
+        AC.busy(btn, true, 'جاري الدخول...');
+        AC.ready().then(function (fb) {
+            if (!fb) throw new Error('تعذر الاتصال بالخادم، جرّب تاني');
+            return fb.login(id, pw);
+        }).then(function () { AC.okLogin(); location.replace(target); })
+          .catch(function (er) { AC.failed(); AC.setErr('l-err', (er && er.message) || 'تعذر تسجيل الدخول'); AC.busy(btn, false); });
+    });
+
+    $('form-reg').addEventListener('submit', function (e) {
+        e.preventDefault(); AC.setErr('r-err', '');
+        var name = AC.cleanName($('r-name').value), phone = AC.digits($('r-phone').value), p1 = $('r-pass').value, p2 = $('r-pass2').value, btn = $('r-btn');
+        if (name.length < 2) return AC.setErr('r-err', 'اكتب اسمك (حرفين على الأقل)');
+        if (!AC.phoneOk(phone)) return AC.setErr('r-err', 'رقم الموبايل لازم يبدأ بـ 010 أو 011 أو 012 أو 015 ويكون 11 رقم');
+        if (!AC.passOk(p1)) return AC.setErr('r-err', AC.passMsg);
+        if (p1 !== p2) return AC.setErr('r-err', 'كلمتا السر غير متطابقتين');
+        AC.busy(btn, true, 'جاري الإنشاء...');
+        AC.ready().then(function (fb) {
+            if (!fb) throw new Error('تعذر الاتصال بالخادم، جرّب تاني');
+            return fb.register({ name: name, phone: phone, password: p1 });
+        }).then(function (u) { $('new-id').textContent = u.userId; show('done'); })
+          .catch(function (er) { AC.setErr('r-err', (er && er.message) || 'تعذر إنشاء الحساب'); AC.busy(btn, false); });
+    });
+
+    $('go-quick').onclick = function () {
+        var btn = this, pw = AC.genPass(); AC.busy(btn, true, 'جاري إنشاء الحساب...');
+        AC.ready().then(function (fb) {
+            if (!fb) throw new Error('تعذر الاتصال بالخادم، جرّب تاني');
+            return fb.register({ name: 'عميل جديد', phone: '', password: pw });
+        }).then(function (u) {
+            $('new-id').textContent = u.userId; $('new-pw').textContent = pw;
+            $('new-pw-box').hidden = false; $('new-pw-note').hidden = false; show('done');
+        }).catch(function (er) { AC.toast((er && er.message) || 'تعذر إنشاء الحساب', true); AC.busy(btn, false); });
+    };
+    $('copy-pw').onclick = function () { AC.copy($('new-pw').textContent); };
+    $('copy-id').onclick = function () { AC.copy($('new-id').textContent); };
+    $('done-go').onclick = function () { location.replace(target); };
+})();
+</script>
+<script src="nav.js"></script>
+</body>
+</html>

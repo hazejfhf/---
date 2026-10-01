@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" translate="no">
+
+<head>
+    <meta name="google" content="notranslate">
+    <script src="splash.js"></script>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https:; img-src 'self' https: data: blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://nominatim.openstreetmap.org; object-src 'none'; base-uri 'self'; form-action 'self'"><meta name="referrer" content="strict-origin-when-cross-origin">
+    <link href="./logo.png" type="image/x-icon" rel="icon">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="موقع لبيع الملابس الداخليه والخارجيه وهديه مجانيه وتوصيل سريع لجيمع المحافاظات">
+    <meta name="author" content="Hazem Momhamed">
+
+    <meta name="keywords" content="بيع الملابس,ملابس داخليه,بيع الملابس الخارجيه,ملابس ,ملابس قطن,مكتب رحيم">
+
+    <title> مكتب رحيم - معرض العرض</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+
+    <!-- شريط الفلترة والتصنيف -->
+    <div class="filter-bar-wrapper" style="max-width:1200px; margin: 0 auto; padding: 0 20px;">
+        <span class="filter-bar-label">🔀 ترتيب حسب:</span>
+        <div class="filter-chips-group">
+            <button class="filter-chip active" onclick="setFilterChip(this, 'default')">⭐ الافتراضي</button>
+            <button class="filter-chip" onclick="setFilterChip(this, 'favorites')">❤️ المفضلة</button>
+            <button class="filter-chip" onclick="setFilterChip(this, 'high-to-low')">💰 السعر: الأعلى</button>
+            <button class="filter-chip" onclick="setFilterChip(this, 'low-to-high')">💵 السعر: الأدنى</button>
+            <button class="filter-chip" onclick="setFilterChip(this, 'newest')">🆕 الأحدث</button>
+            <button class="filter-chip" onclick="setFilterChip(this, 'oldest')">🕰️ الأقدم</button>
+            <button class="filter-chip" onclick="setFilterChip(this, 'rating-high')">⭐ التقييم: الأعلى</button>
+            <button class="filter-chip" onclick="setFilterChip(this, 'rating-low')">📉 التقييم: الأدنى</button>
+        </div>
+        <select id="admin-price-sort" style="display:none;" onchange="triggerPriceSortAction()"><option value="favorites">favorites</option>
+            <option value="default">الافتراضي</option>
+            <option value="high-to-low">السعر: الأعلى</option>
+            <option value="low-to-high">السعر: الأدنى</option>
+            <option value="newest">الأحدث</option>
+            <option value="oldest">الأقدم</option>
+            <option value="rating-high">التقييم: الأعلى</option>
+            <option value="rating-low">التقييم: الأدنى</option>
+        </select>
+    </div>
+
+    <!-- فلترة التصنيف -->
+    <div style="text-align:center; margin: 15px 0;">
+        <button class="filter-btn active" onclick="filterShopCategory('all', event)">الكل</button>
+        <button class="filter-btn" onclick="filterShopCategory('رجالي', event)">رجالي</button>
+        <button class="filter-btn" onclick="filterShopCategory('حريمي', event)">حريمي</button>
+        <button class="filter-btn" onclick="filterShopCategory('أطفال', event)">أطفال</button>
+    </div>
+
+    <div id="product-details-modal" class="review-popup-box">
+    </div>
+    <div id="details-modal-overlay"
+        onclick="closeProductDetailsModal()"></div>
+
+    <div class="products-grid" id="products-container" style="padding: 0 20px; max-width: 1200px; margin: 10px auto;">
+        <!-- المنتجات تظهر هنا ديناميكياً -->
+    </div>
+
+    <div id="toast-notification" class="toast"></div>
+
+
+
+    <script type="module" src="firebase-db.js"></script>
+    <script src="script-1.js"></script>
+    <script src="script-extra.js"></script>
+
+    <script>
+        function setFilterChip(el, value) {
+            document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            const sel = document.getElementById('admin-price-sort');
+            if (sel) { sel.value = value; triggerPriceSortAction(); }
+        }
+    </script>
+
+
+
+<script src="security.js"></script>
+<script src="nav.js"></script>
+</body>
+
+</html>

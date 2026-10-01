@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" translate="no">
+<head>
+    <meta name="google" content="notranslate">
+    <script src="splash.js"></script>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https:; img-src 'self' https: data: blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link href="./logo.png" type="image/x-icon" rel="icon">
+    <title>حسابي - مكتب رحيم</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="ac-wrap ac-wide">
+    <section class="ac-card" id="pf-guest" hidden>
+        <h1>حسابك</h1>
+        <p class="ac-note">سجّل الدخول عشان تشوف بياناتك وتتابع طلباتك.</p>
+        <a class="ac-btn" href="login.html?redirect=profile.html">تسجيل الدخول</a>
+        <a class="ac-btn ac-alt" href="login.html?mode=register&redirect=profile.html">إنشاء حساب جديد</a>
+    </section>
+
+    <div id="pf-main" hidden>
+        <section class="ac-card ac-head">
+            <label class="ac-avatar" for="pf-file" title="تغيير الصورة"><span id="pf-av">👤</span><small>تغيير</small></label>
+            <input type="file" id="pf-file" accept="image/*" hidden>
+            <div>
+                <h1 id="pf-title"></h1>
+                <div class="ac-idbox"><span>رقم الحساب</span><b id="pf-id"></b><button type="button" class="ac-mini" id="pf-copy">نسخ</button></div>
+            </div>
+        </section>
+
+        <section class="ac-card">
+            <h2>بياناتي</h2>
+            <form id="pf-form" novalidate>
+                <label for="pf-name">الاسم</label><input id="pf-name" maxlength="60" autocomplete="name">
+                <label for="pf-phone">رقم الموبايل</label><input id="pf-phone" inputmode="numeric" maxlength="11" autocomplete="tel">
+                <div class="ac-err" id="pf-err" role="alert"></div>
+                <button class="ac-btn" id="pf-save" type="submit">حفظ التغييرات</button>
+            </form>
+        </section>
+
+        <section class="ac-card">
+            <h2>تغيير كلمة السر</h2>
+            <form id="pw-form" novalidate>
+                <label for="pw-old">كلمة السر الحالية</label>
+                <div class="ac-pw"><input id="pw-old" type="password" autocomplete="current-password" maxlength="64"><button type="button" class="ac-eye">إظهار</button></div>
+                <label for="pw-new">كلمة السر الجديدة</label>
+                <div class="ac-pw"><input id="pw-new" type="password" autocomplete="new-password" maxlength="64"><button type="button" class="ac-eye">إظهار</button></div>
+                <label for="pw-new2">تأكيد كلمة السر الجديدة</label>
+                <input id="pw-new2" type="password" autocomplete="new-password" maxlength="64">
+                <div class="ac-err" id="pw-err" role="alert"></div>
+                <button class="ac-btn" id="pw-btn" type="submit">تغيير كلمة السر</button>
+            </form>
+        </section>
+
+        <section class="ac-card">
+            <h2>المظهر</h2>
+            <label class="ac-switch"><input type="checkbox" id="pf-dark"><span>الوضع الداكن</span></label>
+        </section>
+
+        <section class="ac-card ac-links2">
+            <a href="track.html">📦 تتبع طلباتي</a>
+            <a href="gifts.html">🎁 هداياي وعجلة الحظ</a>
+            <button type="button" class="ac-btn ac-danger" id="pf-out">تسجيل الخروج</button>
+        </section>
+    </div>
+</main>
+
+<script type="module" src="firebase-db.js"></script>
+<script src="auth.js"></script>
+<script>
+(function () {
+    var $ = AC.$, u = null;
+    document.querySelectorAll('.ac-eye').forEach(function (b) { b.onclick = function () { AC.eye(b); }; });
+    $('pf-phone').addEventListener('input', function () { this.value = AC.digits(this.value); });
+
+    function setAvatar(src) {
+        var box = $('pf-av'); box.textContent = '';
+        if (src && /^data:image\/(jpeg|png|webp);base64,/.test(src)) { var im = document.createElement('img'); im.src = src; im.alt = ''; box.appendChild(im); } else box.textContent = '👤';
+    }
+    function fill() {
+        $('pf-title').textContent = 'أهلاً، ' + (u.name || '');
+        $('pf-id').textContent = u.userId;
+        $('pf-name').value = u.name || ''; $('pf-phone').value = u.phone || '';
+        $('pf-dark').checked = u.theme === 'dark'; document.body.classList.toggle('dark-mode', u.theme === 'dark');
+        setAvatar(u.avatar);
+    }
+    function persist() {
+        AC.saveLocal(u);
+        try { var all = JSON.parse(localStorage.getItem('global_store_users')) || [], i = all.findIndex(function (x) { return String(x.userId) === String(u.userId); }); if (i >= 0) { all[i] = Object.assign({}, all[i], u); localStorage.setItem('global_store_users', JSON.stringify(all)); } } catch (e) {}
+    }
+
+    AC.ready().then(function (fb) {
+        u = AC.user();
+        if (!fb || !fb.user || !u) { $('pf-guest').hidden = false; return; }
+        $('pf-main').hidden = false; fill();
+    });
+
+    $('pf-copy').onclick = function () { AC.copy($('pf-id').textContent); };
+
+    $('pf-form').addEventListener('submit', function (e) {
+        e.preventDefault(); AC.setErr('pf-err', '');
+        var name = AC.cleanName($('pf-name').value), phone = AC.digits($('pf-phone').value);
+        if (name.length < 2) return AC.setErr('pf-err', 'اكتب اسمك (حرفين على الأقل)');
+        if (phone && !AC.phoneOk(phone)) return AC.setErr('pf-err', 'رقم الموبايل غير صحيح');
+        AC.busy($('pf-save'), true, 'جاري الحفظ...');
+        window.FBAuth.updateProfile({ name: name, phone: phone }).then(function (ok) {
+            AC.busy($('pf-save'), false);
+            if (!ok) return AC.setErr('pf-err', 'تعذر الحفظ، جرّب تاني');
+            u.name = name; u.phone = phone; persist(); fill(); AC.toast('تم حفظ بياناتك');
+        });
+    });
+
+    AC.meter('pw-new');
+    $('pw-form').addEventListener('submit', function (e) {
+        e.preventDefault(); AC.setErr('pw-err', '');
+        var o = $('pw-old').value, n = $('pw-new').value, n2 = $('pw-new2').value;
+        if (!o) return AC.setErr('pw-err', 'اكتب كلمة السر الحالية');
+        if (!AC.passOk(n)) return AC.setErr('pw-err', AC.passMsg);
+        if (n !== n2) return AC.setErr('pw-err', 'كلمتا السر غير متطابقتين');
+        AC.busy($('pw-btn'), true, 'جاري التغيير...');
+        window.FBAuth.changePassword(o, n).then(function () {
+            ['pw-old', 'pw-new', 'pw-new2'].forEach(function (id) { $(id).value = ''; }); AC.toast('تم تغيير كلمة السر');
+        }).catch(function (er) { AC.setErr('pw-err', (er && er.message) || 'تعذر تغيير كلمة السر'); })
+          .then(function () { AC.busy($('pw-btn'), false); });
+    });
+
+    $('pf-dark').onchange = function () {
+        u.theme = this.checked ? 'dark' : 'light'; document.body.classList.toggle('dark-mode', this.checked); persist();
+        if (window.FBAuth && window.FBAuth.updateProfile) { /* الثيم محفوظ محلياً */ }
+    };
+
+    $('pf-file').onchange = function () {
+        var f = this.files[0]; if (!f || !/^image\//.test(f.type) || f.size > 8e6) return AC.toast('اختر صورة صالحة', true);
+        var r = new FileReader();
+        r.onload = function (ev) {
+            var im = new Image();
+            im.onload = function () {
+                var M = 200, w = im.width, h = im.height, s = Math.min(1, M / Math.max(w, h)), c = document.createElement('canvas');
+                c.width = Math.round(w * s); c.height = Math.round(h * s); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+                u.avatar = c.toDataURL('image/jpeg', 0.75); persist(); setAvatar(u.avatar); AC.toast('تم تحديث الصورة');
+            };
+            im.onerror = function () { AC.toast('الصورة غير صالحة', true); };
+            im.src = ev.target.result;
+        };
+        r.readAsDataURL(f);
+    };
+
+    $('pf-out').onclick = function () {
+        if (!confirm('تسجيل الخروج من حسابك؟')) return;
+        window.FBAuth.logout().then(function () { location.replace('index.html'); });
+    };
+})();
+</script>
+<script>if(window.AC)AC.noArabic(['pw-new','pw-new2']);</script>
+<script src="nav.js"></script>
+</body>
+</html>

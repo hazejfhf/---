@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" translate="no">
+
+<head>
+    <meta name="google" content="notranslate">
+    <script src="splash.js"></script>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https:; img-src 'self' https: data: blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://nominatim.openstreetmap.org; object-src 'none'; base-uri 'self'; form-action 'self'"><meta name="referrer" content="strict-origin-when-cross-origin">
+    <link href="./logo.png" type="image/x-icon" rel="icon">
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مكتب رحيم- بوابة الهدايا والجوائز الكبرى 🎁</title>
+    <meta name="description" content="موقع لبيع الملابس الداخليه والخارجيه وهديه مجانيه وتوصيل سريع لجيمع المحافاظات">
+    <meta name="author" content="Hazem Momhamed">
+
+    <meta name="keywords" content="بيع الملابس,ملابس داخليه,بيع الملابس الخارجيه,ملابس ,ملابس قطن,مكتب رحيم">
+
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .gifts-page-container {
+            max-width: 800px;
+            margin: 40px auto;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .wheel-wrapper {
+            position: relative;
+            width: 320px;
+            height: 320px;
+            margin: 40px auto;
+        }
+
+        .lucky-wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 8px solid #14203a;
+            transition: transform 4s cubic-bezier(0.1, 0.8, 0.3, 1);
+            background: conic-gradient(#c7254e 0deg 60deg, #d9962b 60deg 120deg, #1a7f4b 120deg 180deg, #1b2a4a 180deg 240deg, #2a3d66 240deg 300deg, #a8884f 300deg 360deg);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .wheel-pointer {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid #c7254e;
+            z-index: 10;
+        }
+
+        .btn-spin {
+            background: var(--main-color, #14203a);
+            color: white;
+            border: none;
+            padding: 12px 35px;
+            font-size: 1.2rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: 0.3s;
+        }
+
+        .btn-spin:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .prize-box {
+            display: none;
+            background: #fff;
+            border: 2px dashed #1a7f4b;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 25px;
+            animation: popIn 0.5s ease;
+        }
+
+        .coupon-code {
+            display: inline-block;
+            background: #d9962b;
+            color: #000;
+            padding: 8px 15px;
+            font-weight: bold;
+            border-radius: 4px;
+            font-size: 1.3rem;
+            margin-top: 10px;
+            letter-spacing: 1px;
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    
+
+
+
+
+
+
+    <div class="gifts-page-container">
+        <h1 style="color: var(--main-color); margin-bottom: 10px;">🎁 عجلة الحظ والهدايا الفورية!</h1>
+        <p style="color: #666;">اضغط على زر التدوير واربح كود خصم فوري وحصري لطلبك القادم!</p>
+
+        <div class="wheel-wrapper">
+            <div class="wheel-pointer"></div>
+            <div id="lucky-wheel-element" class="lucky-wheel"></div>
+        </div>
+
+        <button id="spin-action-btn" class="btn-spin" onclick="startLuckyWheelSpin()">لف العجلة واربح الآن 🎡</button>
+
+        <div id="prize-result-box" class="prize-box">
+            <h2 style="color: #1a7f4b;">🎉 مبروك! لقد ربحت جائزة فورية:</h2>
+            <p id="prize-text" style="font-size: 1.1rem; margin-top: 5px; font-weight: bold;"></p>
+            <div id="prize-coupon-element" class="coupon-code"></div>
+            <p style="font-size: 0.8rem; color: #777; margin-top: 10px;">(استخدم هذا الكود في صفحة الشراء للحصول على
+                الخصم فوراً)</p>
+        </div>
+        <div
+            style="margin-top: 40px; background: #fdfefe; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; text-align: right;">
+            <h3
+                style="color: var(--main-color); border-bottom: 2px solid #edf2f7; padding-bottom: 8px; margin-bottom: 15px;">
+                📜 محفظة أكوادك وجوائزك المستلمة:</h3>
+            <div id="user-active-coupons-wallet" style="display: flex; flex-direction: column; gap: 10px;">
+            </div>
+        </div>
+
+    </div>
+
+    <div id="toast-notification" class="toast"></div>
+    <script type="module" src="firebase-db.js"></script>
+    <script src="script-1.js"></script>
+    <script>
+        // تشغيل نظام العجلة فور فتح الصفحة
+        if (typeof initGiftsPageSystem === "function") {
+            initGiftsPageSystem();
+        }
+    </script>
+    <script src="script-extra.js"></script>
+<script src="wheel.js"></script>
+
+
+
+<script src="security.js"></script>
+<script src="nav.js"></script>
+</body>
+
+</html>

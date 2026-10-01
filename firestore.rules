@@ -1,0 +1,93 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    function signedIn() { return request.auth != null; }
+    // الأدمن = حساب Firebase Auth له مستند admins/<uid> (بيتعمل يدوياً من الكونسول فقط)
+    function isAdmin() { return signedIn() && exists(/databases/$(db)/documents/admins/$(request.auth.uid)); }
+    function okStr(v, n) { return v is string && v.size() > 0 && v.size() <= n; }
+
+    match /admins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /products/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /config/{id}   { allow read: if true; allow write: if isAdmin(); }
+
+    match /reviews/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['name','text','rating','productId','createdAt','date','_fbId'])
+        && okStr(request.resource.data.name, 60)
+        && okStr(request.resource.data.text, 500)
+        && request.resource.data.rating is number
+        && request.resource.data.rating >= 1 && request.resource.data.rating <= 5;
+      allow update, delete: if isAdmin();
+    }
+
+    // الطلبات: العميل ينشئ ويتتبع بالكود فقط (get). ممنوع list/update/delete للعامة.
+    match /orders/{id} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create: if request.resource.data.totalNum is number
+        && request.resource.data.totalNum >= 0 && request.resource.data.totalNum < 1000000
+        && okStr(request.resource.data.orderId, 40) && request.resource.data.orderId == id
+        && okStr(request.resource.data.clientName, 80)
+        && okStr(request.resource.data.clientPhone, 20)
+        && (request.resource.data.orderStatus == 'جاري التجهيز 📦');
+      allow update, delete: if isAdmin();
+    }
+
+    // عدّاد أرقام الحسابات: بيزيد 1 بس، ويبدأ من 2000000
+    match /counters/users {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == 2000000;
+      allow update: if request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == resource.data.n + 1;
+    }
+
+    // المستخدمين: كل مستخدم يقرأ/يعدّل بياناته فقط، ومقدرش يغيّر الدور/الحظر/صلاحيات العجلة
+    match /users/{uid} {
+      allow read: if (signedIn() && request.auth.uid == uid) || isAdmin();
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['userId','uid','name','phone','role','isBanned','createdAt','lastLogin','theme'])
+        && request.resource.data.userId is int
+        && request.auth.token.email == 'u' + string(request.resource.data.userId) + '@users.officeraheem.app'
+        && request.resource.data.uid == uid
+        && okStr(request.resource.data.name, 80)
+        && request.resource.data.phone is string && request.resource.data.phone.size() <= 20
+        && request.resource.data.role == 'customer'
+        && request.resource.data.isBanned == false;
+      allow update: if (signedIn() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','phone','lastLogin','theme'])
+        && okStr(request.resource.data.name, 80))
+        || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // عجلة الحظ: سحبة واحدة كل config/wheel.hours ساعة — بوقت السيرفر
+    function wheelHours() {
+      return exists(/databases/$(db)/documents/config/wheel)
+        ? get(/databases/$(db)/documents/config/wheel).data.get('hours', 24) : 24;
+    }
+    function spinAllowed(uid) {
+      return exists(/databases/$(db)/documents/users/$(uid))
+        && get(/databases/$(db)/documents/users/$(uid)).data.get('isBanned', false) == false
+        && get(/databases/$(db)/documents/users/$(uid)).data.get('wheelDisabled', false) == false;
+    }
+    match /spins/{uid} {
+      allow read: if (signedIn() && request.auth.uid == uid) || isAdmin();
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['t'])
+        && request.resource.data.t == request.time
+        && spinAllowed(uid);
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['t'])
+        && request.resource.data.t == request.time
+        && resource.data.t + duration.value(wheelHours(), 'h') <= request.time
+        && spinAllowed(uid);
+      allow delete: if isAdmin();
+    }
+
+    match /archive/{id} { allow read, write: if isAdmin(); }
+  }
+}
