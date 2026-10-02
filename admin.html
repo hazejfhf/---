@@ -16,9 +16,18 @@
 
   <title>لوحة الدعم</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="admin-mobile.css">
   <script type="module" src="firebase-db.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
   <style>
+    .pw-eye{position:absolute;left:8px;top:50%;transform:translateY(-50%);background:none;border:0;color:#1b2a4a;font-size:.8rem;cursor:pointer;padding:6px;width:auto;margin:0}
+    .uact{display:flex;flex-wrap:wrap;gap:6px;min-width:150px}
+    .uact button{width:36px;height:36px;border:0;border-radius:10px;color:#fff;font-size:1.05rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;margin:0;transition:transform .12s}
+    .uact button:active{transform:scale(.92)}
+    .uact .a-wheel{background:#2a3d66}.uact .a-ban{background:#c7254e}.uact .a-unban{background:#1a7f4b}
+    .uact .a-sub{background:#d9962b}.uact .a-add{background:#16a085}.uact .a-rem{background:#c0392b}.uact .a-del{background:#6b7280}
+    .uact select{width:100%;padding:6px;border-radius:8px;border:1px solid #ddd;font-size:.8rem;margin:0 0 2px}
+
     .admin-tabs {
       display: flex;
       flex-wrap: wrap;
@@ -262,14 +271,17 @@
         <h3 style="margin-bottom:10px;"> لوحة الدعم</h3>
         <p style="color:#888;font-size:0.85rem;margin-bottom:20px;">أدخل رسالتك </p>
         <div class="form-group" style="text-align:right;">
-          <label> البريد الإلكتروني:</label>
-          <input type="email" id="admin-email-input" placeholder="admin@officeraheem.app" autocomplete="username" dir="ltr"
+          <label> الجيميل:</label>
+          <input type="email" id="admin-email-input" placeholder="ادخل الجيميل" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" dir="ltr"
             onkeydown="if(event.key==='Enter') document.getElementById('admin-pass-input').focus()">
         </div>
         <div class="form-group" style="text-align:right;">
           <label> كلمة السر / رسالتك:</label>
-          <input type="text" id="admin-pass-input" placeholder="أدخل رسالتك "
-            onkeydown="if(event.key==='Enter') unlockAdminPanel()">
+          <div style="position:relative;">
+            <input type="password" id="admin-pass-input" placeholder="أدخل رسالتك " autocomplete="current-password" style="padding-left:62px;"
+              onkeydown="if(event.key==='Enter') unlockAdminPanel()">
+            <button type="button" class="pw-eye" onclick="var i=document.getElementById('admin-pass-input');var h=i.type==='password';i.type=h?'text':'password';this.textContent=h?'إخفاء':'إظهار';">إظهار</button>
+          </div>
         </div>
         <button class="btn-submit" style="width:100%;" onclick="unlockAdminPanel()">ارسال 🚀</button>
         <div id="sub-admin-quick-login"
@@ -621,11 +633,16 @@
             💾</button>
         </div>
         <div class="settings-box">
-          <h3>🔐 تغيير كلمة مرور الأدمن</h3>
-          <div class="form-group"><label>كلمة المرور الجديدة:</label><input type="text" id="setting-new-pass"
-              placeholder="اكتب الرمز الجديد..."></div>
-          <button class="btn-submit" onclick="updateAdminPassword()" style="max-width:220px;">تغيير كلمة السر
-            🔒</button>
+          <h3>🔐 بيانات دخول الأدمن</h3>
+          <div class="form-group" style="margin-top:12px;"><label>كلمة السر الحالية (مطلوبة للتأكيد):</label>
+            <input type="password" id="setting-old-pass" autocomplete="current-password" placeholder="كلمة السر الحالية"></div>
+          <div class="form-group"><label>📧 الجيميل الجديد:</label>
+            <input type="email" id="setting-new-email" dir="ltr" inputmode="email" autocapitalize="none" autocomplete="off" placeholder="example@gmail.com"></div>
+          <button class="btn-submit" onclick="updateAdminEmail()" style="max-width:220px;">تغيير الجيميل 📧</button>
+          <p style="color:#888;font-size:.8rem;margin:6px 0 16px;">هيوصلك رابط تأكيد على الجيميل الجديد، والتغيير بيتم بعد ما تفتحه.</p>
+          <div class="form-group" style="border-top:1px solid #eee;padding-top:14px;"><label>🔑 كلمة السر الجديدة:</label>
+            <input type="password" id="setting-new-pass" autocomplete="new-password" placeholder="8 خانات على الأقل: حروف إنجليزي وأرقام"></div>
+          <button class="btn-submit" onclick="updateAdminPassword()" style="max-width:220px;">تغيير كلمة السر 🔒</button>
         </div>
       </div>
 
@@ -841,6 +858,51 @@
   <script src="script-extra.js"></script>
 <script src="wheel.js"></script>
   <script>
+
+    // ═══ بيانات الأرشيف الحقيقية: المؤرشف + أي طلب مسلّم لسه ما اتأرشفش ═══
+    function _jr(k) { try { return JSON.parse(localStorage.getItem(k)) || []; } catch (e) { return []; } }
+    window.getArchiveData = function () {
+      const out = [], seen = new Set();
+      _jr('global_store_archive').forEach(o => { const id = String(o.id || o.orderId); if (!seen.has(id)) { seen.add(id); out.push(o); } });
+      _jr('global_store_orders').forEach(o => {
+        const st = String(o.orderStatus || o.status || '');
+        const id = String(o.id || o.orderId);
+        if (st.includes('التسليم') && !seen.has(id)) {
+          seen.add(id);
+          const ts = o.deliveredAt || o.timestamp || Date.now();
+          out.push(Object.assign({}, o, { archivedTimestamp: o.archivedTimestamp || ts, archivedAt: o.archivedAt || new Date(ts).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' }) }));
+        }
+      });
+      return out.sort((a, b) => (a.archivedTimestamp || a.timestamp || 0) - (b.archivedTimestamp || b.timestamp || 0));
+    };
+    // ═══ أرشفة تلقائية للطلبات المسلّمة (تشتغل كمان بعد ريفرش الصفحة) ═══
+    window.archiveSweep = function () {
+      const ords = _jr('global_store_orders'), archive = _jr('global_store_archive');
+      const keep = [], moved = [];
+      ords.forEach(o => {
+        const st = String(o.orderStatus || o.status || '');
+        if (st.includes('التسليم') && (Date.now() - (o.deliveredAt || 0)) >= 60000) moved.push(o); else keep.push(o);
+      });
+      if (!moved.length) return;
+      const ids = new Set(archive.map(a => String(a.id || a.orderId)));
+      moved.forEach(o => {
+        const id = o.id || o.orderId;
+        if (!ids.has(String(id))) {
+          o.archivedAt = new Date().toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' });
+          o.archivedTimestamp = Date.now();
+          archive.push(o);
+        }
+        if (typeof window.FB_archiveOrder === 'function') window.FB_archiveOrder(id);
+      });
+      localStorage.setItem('global_store_orders', JSON.stringify(keep));
+      localStorage.setItem('global_store_archive', JSON.stringify(archive));
+      try { orders = keep; } catch (e) { }
+      typeof renderAdminOrdersTable === 'function' && renderAdminOrdersTable();
+      typeof renderAdminArchiveTable === 'function' && renderAdminArchiveTable();
+    };
+    setTimeout(function () { typeof archiveSweep === 'function' && archiveSweep(); }, 3000);
+    setInterval(function () { if (document.getElementById('admin-content') && document.getElementById('admin-content').style.display !== 'none') archiveSweep(); }, 15000);
+
     // ═══ ساعة مصر ═══
     function startEgyptClock() {
       setInterval(function () {
@@ -970,7 +1032,7 @@
     window.renderAdminArchiveTable = function () {
       const tbody = document.getElementById('admin-archive-table-body');
       if (!tbody) return;
-      let archive = JSON.parse(localStorage.getItem('global_store_archive')) || [];
+      let archive = getArchiveData();
       tbody.innerHTML = '';
       if (archive.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#aaa;">لا يوجد طلبات مؤرشفة بعد.</td></tr>';
@@ -979,7 +1041,7 @@
       archive.slice().reverse().forEach(ord => {
         const items = ord.cartSnapshot || ord.cartItems || ord.items || [];
         const itemsText = items.length > 0 ? items.map(i => i.title).join('، ') : (ord.productsDetails || ord.products || '—');
-        const count = items.length || ord.itemsCount || 1;
+        const count = items.length ? items.reduce((t, i) => t + (parseInt(i.qty) || 1), 0) : (ord.itemsCount || 1);
         tbody.innerHTML += `<tr>
       <td style="font-family:monospace;font-size:0.83rem;">${ord.id || ord.orderId}</td>
       <td>${ord.clientName || ord.name || '—'}</td>
@@ -996,7 +1058,7 @@
     function renderTopProducts(period) {
       const container = document.getElementById('top-products-list');
       if (!container) return;
-      let archive = JSON.parse(localStorage.getItem('global_store_archive')) || [];
+      let archive = getArchiveData();
       const now = new Date();
       const cairoCurrent = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Cairo' }));
 
@@ -1077,7 +1139,7 @@
     // ═══ الرسم البياني للمبيعات ═══
     let salesChartInstance = null;
     function renderSalesChart(mode) {
-      const archive = JSON.parse(localStorage.getItem('global_store_archive')) || [];
+      const archive = getArchiveData();
       const cairoNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Cairo' }));
       let labels = [], data = [];
 
@@ -1146,7 +1208,7 @@
     }
 
     function renderAdvancedAnalytics() {
-      const archive = JSON.parse(localStorage.getItem('global_store_archive')) || [];
+      const archive = getArchiveData();
       const allOrders = JSON.parse(localStorage.getItem('global_store_orders')) || [];
 
       let totalRev = 0, totalItems = 0, freq = {};
@@ -1406,6 +1468,7 @@
   </script>
 
 
+<script src="admin-mobile.js"></script>
 <script src="security.js"></script>
 <script>
   // لو الأدمن عامل دخول بالفعل (جلسة Firebase) نفتح اللوحة تلقائياً

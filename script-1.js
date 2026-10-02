@@ -585,7 +585,7 @@ async function unlockAdminPanel() {
         if (A) {
             await A.ready;
             if (A.isAdminSession) { window.__adm = true; }
-            else if (entered) { window.__adm = await A.adminLogin((emailEl && emailEl.value.trim()) || window.ADMIN_LOGIN_EMAIL, entered); }
+            else if (entered) { window.__adm = await A.adminLogin((emailEl && emailEl.value.trim()), entered); }
         }
     } catch (e) { window.__adm = false; }
     if (window.__adm) {
@@ -612,7 +612,7 @@ async function unlockAdminPanel() {
             passInput.placeholder = 'بيانات الدخول خاطئة أو الحساب ليس أدمن';
             setTimeout(() => {
                 passInput.style.border = '';
-                passInput.placeholder = 'أدخل كلمة المرور';
+                passInput.placeholder = 'أدخل رسالتك ';
             }, 2000);
             passInput.focus();
         }
@@ -697,30 +697,61 @@ function deleteProductFromAdmin(id) {
     });
 }
 
-function saveProductAction() {
-    const editId = document.getElementById('edit-prod-id').value;
-    const title = document.getElementById('prod-title').value.trim();
-    const desc = document.getElementById('prod-desc').value.trim();
-    const price = document.getElementById('prod-price').value;
-    const discount = document.getElementById('prod-discount').value || 0;
-    const category = document.getElementById('prod-category').value;
-    const fileInput = document.getElementById('prod-img-file');
-
-    if (title === "" || price === "") { showToast("⚠️ الرجاء ملء حقول الاسم والسعر قبل المتابعة!"); return; }
-
-    if (fileInput && fileInput.files && fileInput.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            commitProductToStorage(editId, title, desc, price, discount, category, e.target.result);
+function _compressImage(file, cb) {
+    // يصغّر الصورة (حد أقصى 900px) عشان تتحفظ بأمان في المتصفح وFirebase
+    const reader = new FileReader();
+    reader.onerror = function () { cb(null); };
+    reader.onload = function (e) {
+        const img = new Image();
+        img.onerror = function () { cb(e.target.result); };
+        img.onload = function () {
+            try {
+                const MAX = 900;
+                let w = img.width, h = img.height;
+                if (w > MAX || h > MAX) { const r = Math.min(MAX / w, MAX / h); w = Math.round(w * r); h = Math.round(h * r); }
+                const c = document.createElement('canvas'); c.width = w; c.height = h;
+                c.getContext('2d').drawImage(img, 0, 0, w, h);
+                cb(c.toDataURL('image/jpeg', 0.82));
+            } catch (err) { cb(e.target.result); }
         };
-        reader.readAsDataURL(fileInput.files[0]);
-    } else {
-        let currentImg = "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500";
-        if (editId) {
-            const currentObj = products.find(p => p.id == editId);
-            if (currentObj) currentImg = currentObj.img;
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function saveProductAction() {
+    try {
+        const g = id => document.getElementById(id);
+        const editId = g('edit-prod-id').value;
+        const title = g('prod-title').value.trim();
+        const desc = g('prod-desc').value.trim();
+        const price = g('prod-price').value;
+        const discount = g('prod-discount').value || 0;
+        const category = g('prod-category') ? g('prod-category').value : '';
+        const fileInput = g('prod-img-file');
+
+        if (title === "") { showToast("⚠️ اكتب اسم المنتج الأول"); g('prod-title').focus(); return; }
+        if (price === "" || isNaN(parseFloat(price)) || parseFloat(price) <= 0) { showToast("⚠️ اكتب سعر صحيح للمنتج"); g('prod-price').focus(); return; }
+        const d = parseInt(discount);
+        if (isNaN(d) || d < 0 || d > 100) { showToast("⚠️ نسبة الخصم لازم تكون بين 0 و 100"); g('prod-discount').focus(); return; }
+
+        if (fileInput && fileInput.files && fileInput.files[0]) {
+            showToast("⏳ جاري رفع الصورة...");
+            _compressImage(fileInput.files[0], function (dataUrl) {
+                if (!dataUrl) { showToast("❌ تعذّر قراءة الصورة، جرّب صورة تانية"); return; }
+                commitProductToStorage(editId, title, desc, price, discount, category, dataUrl);
+            });
+        } else {
+            let currentImg = "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500";
+            if (editId) {
+                const currentObj = products.find(p => p.id == editId);
+                if (currentObj) currentImg = currentObj.img;
+            }
+            commitProductToStorage(editId, title, desc, price, discount, category, currentImg);
         }
-        commitProductToStorage(editId, title, desc, price, discount, category, currentImg);
+    } catch (err) {
+        console.error('saveProductAction', err);
+        showToast("❌ حصل خطأ أثناء الحفظ: " + (err && err.message ? err.message : err));
     }
 }
 
@@ -734,30 +765,37 @@ function commitProductToStorage(editId, title, desc, price, discount, category, 
     const sold = Math.max(0, Math.min(1000000, parseInt(soldEl && soldEl.value) || 0));
     const bestSeller = !!(bestEl && bestEl.checked);
 
+    let savedProd = null;
     if (editId) {
-        products = products.map(p => p.id == editId
-            ? { ...p, title, desc, price: parseFloat(price), discount: parseInt(discount), img: imgSource, availableSizes: selectedSizes, availableColors: selectedColors, sold, bestSeller }
-            : p
-        );
-        showToast("تم تحديث وحفظ بيانات الموديل المختار.");
+        products = products.map(p => {
+            if (p.id != editId) return p;
+            savedProd = { ...p, title, desc, price: parseFloat(price), discount: parseInt(discount) || 0, img: imgSource, availableSizes: selectedSizes, availableColors: selectedColors, sold, bestSeller };
+            return savedProd;
+        });
+        showToast("✅ تم تحديث وحفظ بيانات الموديل.");
     } else {
-        products.push({
+        savedProd = {
             id: Date.now(), title, desc,
-            price: parseFloat(price), discount: parseInt(discount),
+            price: parseFloat(price), discount: parseInt(discount) || 0,
             img: imgSource,
             availableSizes: selectedSizes, availableColors: selectedColors,
             sold, bestSeller,
             timestamp: Date.now()
-        });
-        showToast("تم إدراج القطعة الجديدة بنجاح للمتجر.");
+        };
+        products.unshift(savedProd);
+        showToast("✅ تم إضافة المنتج بنجاح للمتجر.");
     }
 
-    localStorage.setItem('global_store_products', JSON.stringify(products));
-    // ── Firebase: حفظ المنتجات ──
-    if (typeof window.FB_saveProduct === 'function') {
-        const savedProd = products.find(p => String(p.id) === String(document.getElementById('edit-prod-id').value)) || products[products.length - 1];
-        if (savedProd) window.FB_saveProduct(savedProd);
+    try {
+        localStorage.setItem('global_store_products', JSON.stringify(products));
+    } catch (err) {
+        console.error('storage full', err);
+        showToast("⚠️ مساحة المتصفح ممتلئة، الصورة كبيرة — استخدم صورة أصغر");
+        if (!editId) products = products.filter(p => p !== savedProd);
+        return;
     }
+    // ── Firebase: حفظ المنتج ──
+    if (savedProd && typeof window.FB_saveProduct === 'function') window.FB_saveProduct(savedProd);
     cancelEditMode();
     refreshAdminStats();
     searchAdminProducts();
@@ -776,8 +814,8 @@ function cancelEditMode() {
     document.querySelectorAll('#admin-colors-checkboxes input').forEach(cb => cb.checked = false);
     const previewBox = document.getElementById('img-preview-box');
     if (previewBox) previewBox.style.display = 'none';
-    document.getElementById('form-action-title').innerText = "إضافة قطعة ثياب جديدة للمتجر";
-    document.getElementById('btn-save-prod').innerText = "إدراج وحفظ القطعة الآن 💾";
+    document.getElementById('form-action-title').innerText = "➕ إضافة منتج جديد";
+    document.getElementById('btn-save-prod').innerText = "إضافة المنتج 🚀";
     document.getElementById('btn-cancel-edit').style.display = 'none';
 }
 
@@ -868,7 +906,7 @@ function changeOrderStatusFromAdmin(index, newStatus) {
         renderAdminOrdersTable();
         // أرشفة بعد 60 ثانية
         if (newStatus.includes('التسليم')) {
-            setTimeout(function() { archiveDeliveredOrder(allOrders[index].id || allOrders[index].orderId); }, 60000);
+            setTimeout(function() { typeof archiveSweep === 'function' && archiveSweep(); }, 61000);
         }
     }
 }
@@ -966,14 +1004,29 @@ function saveTransferPhone() {
     showToast("✅ تم حفظ رقم التحويل الجديد: " + val);
 }
 
-function updateAdminPassword() {
-    const newPass = document.getElementById('setting-new-pass').value.trim();
-    if (newPass === "") { showToast("الرجاء كتابة رمز حقيقي وغير فارغ!"); return; }
-    if (newPass.length < 8) { showToast('كلمة السر لازم 8 أحرف على الأقل'); return; }
-    _sha(newPass).then(h=>{ siteConfig.adminHash = h; delete siteConfig.adminPass; localStorage.setItem('global_store_config', JSON.stringify(siteConfig)); });
-    localStorage.setItem('global_store_config', JSON.stringify(siteConfig));
-    document.getElementById('setting-new-pass').value = "";
-    showToast("🔒 تم تحديث كلمة مرور المشرف بنجاح.");
+async function updateAdminPassword() {
+    const oldPass = (document.getElementById('setting-old-pass') || {}).value || '';
+    const newPass = (document.getElementById('setting-new-pass') || {}).value || '';
+    if (!oldPass) { showToast('اكتب كلمة السر الحالية'); return; }
+    if (!newPass) { showToast('اكتب كلمة السر الجديدة'); return; }
+    try {
+        await window.FBAuth.changeAdminPassword(oldPass, newPass);
+        document.getElementById('setting-new-pass').value = '';
+        document.getElementById('setting-old-pass').value = '';
+        showToast('🔒 تم تغيير كلمة سر الأدمن');
+    } catch (e) { showToast('❌ ' + ((e && e.message) || 'تعذر التغيير')); }
+}
+
+async function updateAdminEmail() {
+    const oldPass = (document.getElementById('setting-old-pass') || {}).value || '';
+    const newEmail = (document.getElementById('setting-new-email') || {}).value || '';
+    if (!newEmail.trim()) { showToast('اكتب الجيميل الجديد'); return; }
+    try {
+        await window.FBAuth.changeAdminEmail(oldPass, newEmail);
+        document.getElementById('setting-new-email').value = '';
+        document.getElementById('setting-old-pass').value = '';
+        showToast('📧 اتبعت رابط تأكيد على الجيميل الجديد. افتحه وبعدها ادخل بيه.');
+    } catch (e) { showToast('❌ ' + ((e && e.message) || 'تعذر التغيير')); }
 }
 
 

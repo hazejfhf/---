@@ -203,29 +203,7 @@ function addNewGovernorate() {
 // 3. إصلاح ترتيب العرض - المنتجات والطلبات الجديدة تظهر أولاً (فوق)
 // =========================================================================
 
-// Override saveProductAction لإضافة المنتج في البداية بدل النهاية
-const _origSaveProd = window.saveProductAction;
-window.saveProductAction = function() {
-    const title = document.getElementById('prod-title') ? document.getElementById('prod-title').value.trim() : '';
-    const editId = document.getElementById('edit-prod-id') ? document.getElementById('edit-prod-id').value : '';
-
-    if (!editId && title) {
-        // منتج جديد - سيُضاف في النهاية بالكود الأصلي، نعيد ترتيبه بعدها
-        const prevLen = products.length;
-        if (_origSaveProd) _origSaveProd.apply(this, arguments);
-        if (products.length > prevLen) {
-            // انقل آخر عنصر لأول القائمة
-            const newProd = products.pop();
-            products.unshift(newProd);
-            localStorage.setItem('global_store_products', JSON.stringify(products));
-            searchAdminProducts && searchAdminProducts();
-            if (document.getElementById('main-products-container')) renderMainProductsGrid(products);
-            if (document.getElementById('products-container')) renderShopProductsGrid(products);
-        }
-    } else {
-        if (_origSaveProd) _origSaveProd.apply(this, arguments);
-    }
-};
+// (الإضافة في أول القائمة بقت جوه commitProductToStorage مباشرة)
 
 // Override submitFinalOrder لجعل الطلبات الجديدة تظهر أولاً
 const _origSubmitOrder = window.submitFinalOrder;
@@ -988,19 +966,20 @@ window.renderEnhancedAdminUsersTable = function() {
             </td>
             <td style="font-size:0.82rem;">${wheelInfo}</td>
             <td>
-                <select onchange="setUserBadge(${realIdx}, this.value)" style="padding:4px;border-radius:4px;border:1px solid #ddd;font-size:0.78rem;width:100%;margin-bottom:4px;">
-                    <option value="none" ${!u.badge||u.badge==='none'?'selected':''}>بدون</option>
+                <div class="uact">
+                <select onchange="setUserBadge(${realIdx}, this.value)" aria-label="العلامة">
+                    <option value="none" ${!u.badge||u.badge==='none'?'selected':''}>بدون علامة</option>
                     <option value="vip"  ${u.badge==='vip'?'selected':''}>⭐ مميز</option>
                     <option value="trouble" ${u.badge==='trouble'?'selected':''}>⚠️ مشاغب</option>
                 </select>
-                <button onclick="openUserWheelModal(${realIdx})" style="background:#2a3d66;color:#fff;border:none;padding:3px 6px;border-radius:4px;cursor:pointer;font-size:0.72rem;display:block;width:100%;margin-bottom:3px;">🎡 صلاحيات العجلة</button>
-                <button onclick="toggleUserBan(${realIdx})" style="background:${u.isBanned?'#1a7f4b':'#c7254e'};color:#fff;border:none;padding:3px 6px;border-radius:4px;cursor:pointer;font-size:0.72rem;display:block;width:100%;margin-bottom:3px;">${u.isBanned?'✅ رفع الحظر':'🚫 حظر'}</button>
-                <button onclick="enterSubAdminForUser(${realIdx})" style="background:#d9962b;color:#fff;border:none;padding:3px 6px;border-radius:4px;cursor:pointer;font-size:0.72rem;display:block;width:100%;margin-bottom:3px;">🔑 دخول كأدمن مساعد</button>
+                <button class="a-wheel" title="صلاحيات العجلة" aria-label="صلاحيات العجلة" onclick="openUserWheelModal(${realIdx})">🎡</button>
+                <button class="${u.isBanned?'a-unban':'a-ban'}" title="${u.isBanned?'رفع الحظر':'حظر'}" aria-label="${u.isBanned?'رفع الحظر':'حظر'}" onclick="toggleUserBan(${realIdx})">${u.isBanned?'✅':'🚫'}</button>
+                <button class="a-sub" title="دخول كأدمن مساعد" aria-label="دخول كأدمن مساعد" onclick="enterSubAdminForUser(${realIdx})">🔑</button>
                 ${u.isSubAdmin
-                    ? `<button onclick="removeUserAdmin(${realIdx})" style="background:#c0392b;color:#fff;border:none;padding:3px 6px;border-radius:4px;cursor:pointer;font-size:0.72rem;display:block;width:100%;margin-bottom:3px;">❌ إزالة كأدمن</button>`
-                    : `<button onclick="makeUserAdmin(${realIdx})" style="background:#16a085;color:#fff;border:none;padding:3px 6px;border-radius:4px;cursor:pointer;font-size:0.72rem;display:block;width:100%;margin-bottom:3px;">👑 إضافة كأدمن</button>`
-                }
-                <button onclick="deleteUser(${realIdx})" style="background:#2a3d66;color:#fff;border:none;padding:3px 6px;border-radius:4px;cursor:pointer;font-size:0.72rem;display:block;width:100%;">🗑 حذف</button>
+                    ? `<button class="a-rem" title="إزالة كأدمن" aria-label="إزالة كأدمن" onclick="removeUserAdmin(${realIdx})">❌</button>`
+                    : `<button class="a-add" title="إضافة كأدمن" aria-label="إضافة كأدمن" onclick="makeUserAdmin(${realIdx})">👑</button>`}
+                <button class="a-del" title="حذف" aria-label="حذف" onclick="deleteUser(${realIdx})">🗑</button>
+                </div>
             </td>
             <td></td>
         </tr>`;

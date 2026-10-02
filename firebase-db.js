@@ -12,7 +12,7 @@ import {
 import {
     getAuth, onAuthStateChanged, signInWithEmailAndPassword,
     createUserWithEmailAndPassword, signOut, updatePassword,
-    EmailAuthProvider, reauthenticateWithCredential
+    EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 // ─── إعدادات Firebase ────────────────────────────────────────────
@@ -402,6 +402,43 @@ window.FBAuth = {
         return true;
     },
 
+
+    // ── بيانات دخول الأدمن (تتطلب كلمة السر الحالية، زي المواقع الكبيرة) ──
+    _adminErr(e) {
+        const m = {
+            "auth/invalid-credential": "كلمة السر الحالية غير صحيحة",
+            "auth/wrong-password": "كلمة السر الحالية غير صحيحة",
+            "auth/invalid-email": "اكتب جيميل صحيح",
+            "auth/email-already-in-use": "الجيميل ده مستخدم في حساب تاني",
+            "auth/weak-password": "كلمة السر الجديدة ضعيفة",
+            "auth/too-many-requests": "محاولات كتير، استنى شوية وحاول تاني",
+            "auth/requires-recent-login": "سجّل خروج وادخل من جديد ثم حاول تاني",
+            "auth/operation-not-allowed": "تغيير الإيميل مش مفعّل في Firebase (راجع إعدادات Authentication)",
+            "auth/network-request-failed": "مشكلة في الاتصال بالإنترنت"
+        };
+        return new Error(m[e && e.code] || "حدث خطأ، حاول مرة أخرى");
+    },
+    async _adminReauth(oldPass) {
+        const u = auth.currentUser;
+        if (!u || !window.FBAuth.isAdminSession) throw new Error("سجّل الدخول كأدمن أولاً");
+        if (!oldPass) throw new Error("اكتب كلمة السر الحالية");
+        try { await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, oldPass)); }
+        catch (e) { throw window.FBAuth._adminErr(e); }
+        return u;
+    },
+    async changeAdminPassword(oldPass, newPass) {
+        const u = await window.FBAuth._adminReauth(oldPass);
+        if (!strongPass(newPass)) throw new Error("كلمة السر الجديدة: 8 خانات على الأقل، حروف إنجليزي وأرقام");
+        try { await updatePassword(u, newPass); } catch (e) { throw window.FBAuth._adminErr(e); }
+    },
+    async changeAdminEmail(oldPass, newEmail) {
+        const u = await window.FBAuth._adminReauth(oldPass);
+        newEmail = String(newEmail || "").trim().toLowerCase();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) throw new Error("اكتب جيميل صحيح");
+        if (newEmail === String(u.email).toLowerCase()) throw new Error("ده نفس الجيميل الحالي");
+        try { await verifyBeforeUpdateEmail(u, newEmail); } catch (e) { throw window.FBAuth._adminErr(e); }
+    },
+
     async _checkAdmin() {
         const u = auth.currentUser;
         window.FBAuth.isAdminSession = false;
@@ -448,7 +485,10 @@ window.FB_startAdminWatchers = async function () {
         if (typeof refreshAdminStats === 'function') refreshAdminStats();
     });
     window.FB_watchArchive(function (liveArchive) {
-        LS.setItem('global_store_archive', JSON.stringify(liveArchive));
+        const _loc = jget('global_store_archive', []);
+        const _ids = new Set(liveArchive.map(a => String(a.id || a.orderId)));
+        const _merged = liveArchive.concat(_loc.filter(a => !_ids.has(String(a.id || a.orderId))));
+        LS.setItem('global_store_archive', JSON.stringify(_merged));
         if (typeof renderAdminArchiveTable === 'function') renderAdminArchiveTable();
     });
     // المستخدمين: نضم الحسابات من Firebase مع المحلية
